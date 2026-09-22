@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Physik Trainer</title>
+<style>
+  :root{
+    --bg:#0f1115; --panel:#171a21; --panel2:#1e2229; --border:#2a2f3a;
+    --text:#e8eaed; --muted:#8b93a1; --accent:#4f8cff; --accent2:#6ee7b7;
+    --warn:#f5a623; --bad:#f2545b; --good:#4fd08a;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--text);}
+  #app{max-width:840px;margin:0 auto;padding:14px 14px 60px;}
+  header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:8px;}
+  h1{font-size:18px;margin:0;font-weight:600;}
+  .iconbtn{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:8px 10px;cursor:pointer;font-size:14px;}
+  .iconbtn:hover{border-color:var(--accent);}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:14px;margin-bottom:12px;}
+  .overall{display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;}
+  .barBg{background:var(--panel2);border-radius:8px;height:10px;overflow:hidden;}
+  .barFg{background:var(--good);height:100%;width:0%;transition:width .3s;}
+  .deficit-row{display:flex;gap:10px;overflow-x:auto;padding-top:10px;}
+  .deficit-chip{flex:0 0 auto;background:var(--panel2);border:1px solid var(--bad);border-radius:10px;padding:7px 10px;min-width:110px;}
+  .deficit-chip .val{font-size:16px;font-weight:700;}
+  .deficit-chip .lbl{font-size:11px;color:var(--muted);margin-top:2px;}
+  button.primary{background:var(--accent);color:#fff;border:none;border-radius:10px;padding:12px 18px;font-size:15px;font-weight:600;cursor:pointer;width:100%;}
+  button.primary:disabled{opacity:.5;cursor:default;}
+  button.secondary{background:transparent;border:1px solid var(--border);color:var(--text);border-radius:10px;padding:10px 14px;font-size:14px;cursor:pointer;}
+  .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
+  .switch{position:relative;width:44px;height:24px;flex:0 0 auto;}
+  .switch input{opacity:0;width:0;height:0;}
+  .slider-tog{position:absolute;cursor:pointer;inset:0;background:#333;border-radius:24px;transition:.2s;}
+  .slider-tog:before{position:absolute;content:"";height:18px;width:18px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s;}
+  input:checked + .slider-tog{background:var(--accent);}
+  input:checked + .slider-tog:before{transform:translateX(20px);}
+  .task-grp{font-size:11px;color:var(--accent2);text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px;}
+  .task-topic{font-size:15px;font-weight:600;margin-bottom:6px;}
+  .task-text{font-size:15px;line-height:1.55;white-space:pre-wrap;}
+  .skillbars{display:flex;gap:10px;margin:8px 0 10px;flex-wrap:wrap;}
+  .skillbar{flex:1;min-width:100px;}
+  .skillbar .lbl{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:3px;}
+  .skillbar .track{background:var(--panel2);border-radius:6px;height:6px;overflow:hidden;}
+  .skillbar .fill{background:var(--accent);height:100%;}
+  .chatlog{margin-top:10px;max-height:48vh;overflow-y:auto;border:1px solid var(--border);border-radius:10px;padding:10px;background:rgba(0,0,0,.15);}
+  .chatmsg{font-size:13.5px;line-height:1.5;margin-bottom:10px;padding:9px 11px;border-radius:10px;}
+  .chatmsg:last-child{margin-bottom:0;}
+  .chatmsg.ki{background:var(--panel2);border:1px solid var(--border);}
+  .chatmsg.ki.current{border-color:var(--accent);}
+  .chatmsg.du{background:rgba(79,140,255,.08);margin-left:16px;}
+  .chatmsg .tag{display:block;font-size:10px;letter-spacing:.03em;color:var(--accent2);margin-bottom:3px;font-weight:700;}
+  .chatmsg.du .tag{color:var(--muted);}
+  .chatrow{display:flex;gap:8px;margin-top:10px;}
+  .chatrow textarea{flex:1;resize:none;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px;font-size:14px;font-family:inherit;min-height:40px;}
+  .chatrow button{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:0 14px;font-weight:600;cursor:pointer;}
+  #canvasWrap{position:relative;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:#fff;margin-top:10px;touch-action:none;}
+  canvas{display:block;width:100%;touch-action:none;}
+  .canvas-tools{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;}
+  .feedback{margin-top:10px;padding:10px;border-radius:10px;font-size:14px;line-height:1.5;white-space:pre-wrap;}
+  .feedback.correct{background:rgba(79,208,138,.12);border:1px solid var(--good);}
+  .feedback.partial{background:rgba(245,166,35,.12);border:1px solid var(--warn);}
+  .feedback.incorrect{background:rgba(242,84,91,.12);border:1px solid var(--bad);}
+  details summary{cursor:pointer;font-size:14px;color:var(--muted);padding:4px 0;}
+  .check-item{font-size:13px;padding:4px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;gap:8px;}
+  .check-item .area{color:var(--muted);font-size:11px;white-space:nowrap;}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;z-index:50;}
+  .modal{background:var(--panel);border-top:1px solid var(--border);border-radius:16px 16px 0 0;padding:18px;width:100%;max-width:840px;max-height:85vh;overflow-y:auto;}
+  .field{margin-bottom:14px;}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:5px;}
+  .field input[type=text],.field input[type=password],.field select{width:100%;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px;font-size:14px;}
+  .field input[type=range]{width:100%;}
+  .rangeval{font-size:12px;color:var(--accent2);float:right;}
+  .modal-close{position:sticky;top:0;text-align:right;margin-bottom:8px;}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;margin-right:6px;vertical-align:-2px;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .muted{color:var(--muted);font-size:13px;}
+  .errbox{background:rgba(242,84,91,.12);border:1px solid var(--bad);border-radius:10px;padding:10px;font-size:13px;margin-top:8px;}
+  .pen-row{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);margin-top:10px;}
+  .pen-dot{width:8px;height:8px;border-radius:50%;background:var(--bad);flex:0 0 auto;}
+  .pen-dot.on{background:var(--good);}
+  .chatmsg :is(h1,h2,h3){font-size:14px;margin:6px 0 4px;}
+  .chatmsg p{margin:0 0 8px;}
+  .chatmsg p:last-child{margin-bottom:0;}
+  .chatmsg ul,.chatmsg ol{margin:0 0 8px 18px;padding:0;}
+  .chatmsg table{border-collapse:collapse;margin:6px 0;font-size:12.5px;}
+  .chatmsg th,.chatmsg td{border:1px solid var(--border);padding:4px 7px;text-align:left;}
+  .chatmsg code{background:rgba(255,255,255,.08);border-radius:4px;padding:1px 4px;font-size:12.5px;}
+  .chatmsg strong{color:var(--accent2);}
+  .katex{font-size:1.02em;}
+</style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.2/marked.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/contrib/auto-render.min.js"></script>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>⚛ Physik Trainer</h1>
+    <div style="display:flex;gap:8px;">
+      <button class="iconbtn" id="btnChecklist">☰ Liste</button>
+      <button class="iconbtn" id="btnSettings">⚙</button>
+    </div>
+  </header>
+
+  <div class="card">
+    <div class="overall"><span>Gesamtfortschritt (Skill-Ø)</span><span id="overallLbl">0</span></div>
+    <div class="barBg"><div class="barFg" id="overallBar"></div></div>
+    <div class="muted" style="margin-top:10px;font-size:11.5px;">Größte Defizite (Ausschnitt — alle Themen unter „☰ Liste"):</div>
+    <div class="deficit-row" id="deficitRow"></div>
+  </div>
+
+  <div class="card">
+    <div class="toggle-row" style="margin-bottom:0;">
+      <div>
+        <div style="font-size:14px;font-weight:600;">Testmodus</div>
+        <div class="muted">Größere Skill-Ausschläge pro Aufgabe</div>
+      </div>
+      <label class="switch"><input type="checkbox" id="testMode"><span class="slider-tog"></span></label>
+    </div>
+  </div>
+
+  <div class="card" id="mainCard">
+    <div id="idleView">
+      <p class="muted">Die KI wählt beim Start das nächste passende Thema aus deinem Themenplan — bevorzugt Bereiche mit niedrigem Skill — und stellt dazu Aufgaben. Du navigierst nicht selbst; die KI hakt ab, wenn sie ein Thema für beherrscht hält.</p>
+      <button class="primary" id="btnStart">Start</button>
+    </div>
+    <div id="taskView" style="display:none;">
+      <div class="task-grp" id="taskGrp"></div>
+      <div class="task-topic" id="taskTopic"></div>
+      <div class="skillbars" id="skillBars"></div>
+      <div class="chatlog" id="chatLog"></div>
+      <div class="chatrow">
+        <textarea id="chatInput" placeholder="Frage stellen oder „erklär mir das nochmal" schreiben…"></textarea>
+        <button id="btnAsk">Fragen</button>
+      </div>
+      <div class="pen-row" id="penRow">
+        <span class="pen-dot" id="penDot"></span>
+        <span id="penStatusTxt">Neolab-Stift: nicht verbunden</span>
+        <button class="secondary" id="btnPenConnect" style="margin-left:auto;">🖊 Stift verbinden</button>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:4px;">Stift-Verbindung braucht Chrome/Edge und http://localhost oder https:// (nicht per Doppelklick geöffnet). Erste Kopplung: einmal klicken, danach merkt sich der Browser den Stift.</div>
+      <div id="canvasWrap">
+        <canvas id="canvas"></canvas>
+      </div>
+      <div class="canvas-tools">
+        <button class="secondary" id="btnUndo">↶ Rückgängig</button>
+        <button class="secondary" id="btnClear">🗑 Löschen</button>
+        <label class="secondary" style="cursor:pointer;">
+          📷 Bild einfügen
+          <input type="file" id="fileInput" accept="image/*" style="display:none;">
+        </label>
+      </div>
+      <textarea id="solutionText" placeholder="Zusätzlich als Text erklären/lösen (optional, kann auch statt Bild allein genutzt werden)…" style="width:100%;margin-top:10px;resize:vertical;min-height:44px;background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:9px;font-size:14px;font-family:inherit;"></textarea>
+      <button class="primary" id="btnSubmit" style="margin-top:10px;">Lösung einschicken</button>
+      <div id="feedbackBox"></div>
+    </div>
+  </div>
+
+  <div id="errorSlot"></div>
+</div>
+
+<div class="modal-bg" id="checklistModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-close"><button class="iconbtn" data-close="checklistModal">✕</button></div>
+    <h2 style="margin-top:0;font-size:16px;">Themen &amp; gelöste Aufgaben</h2>
+    <p class="muted">Komprimiert gespeichert, um Tokens zu sparen. Klicke zum Aufklappen.</p>
+    <div id="checklistBody"></div>
+  </div>
+</div>
+
+<div class="modal-bg" id="settingsModal" style="display:none;">
+  <div class="modal">
+    <div class="modal-close"><button class="iconbtn" data-close="settingsModal">✕</button></div>
+    <h2 style="margin-top:0;font-size:16px;">Einstellungen</h2>
+
+    <div class="field">
+      <label>OpenAI API-Key (nur lokal in deinem Browser gespeichert)</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-...">
+    </div>
+    <div class="field">
+      <label>Modell</label>
+      <select id="modelSelect"></select>
+      <div id="modelPriceInfo" class="muted" style="margin-top:6px;"></div>
+    </div>
+    <details style="margin-bottom:14px;">
+      <summary class="muted" style="cursor:pointer;">Alle Modellpreise anzeigen</summary>
+      <table id="priceTable" style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
+        <thead><tr style="color:var(--muted);text-align:left;">
+          <th style="padding:4px 6px;">Modell</th><th style="padding:4px 6px;">Input /1M</th><th style="padding:4px 6px;">Output /1M</th><th style="padding:4px 6px;">≈ Preis/Bild</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </details>
+    <div class="field">
+      <label>Skill-Schrittgröße (K-Faktor, normal) <span class="rangeval" id="kNormalVal"></span></label>
+      <input type="range" id="kNormal" min="4" max="64" step="1">
+    </div>
+    <div class="field">
+      <label>Skill-Schrittgröße (K-Faktor, Testmodus) <span class="rangeval" id="kTestVal"></span></label>
+      <input type="range" id="kTest" min="4" max="96" step="1">
+    </div>
+    <div class="field">
+      <label>Skill-Schwelle „beherrscht" <span class="rangeval" id="thresholdVal"></span></label>
+      <input type="range" id="threshold" min="100" max="1000" step="10">
+    </div>
+    <div class="field">
+      <label>Stiftbreite <span class="rangeval" id="penWidthVal"></span></label>
+      <input type="range" id="penWidth" min="1" max="8" step="1">
+    </div>
+    <div class="field">
+      <button class="secondary" id="btnResetProgress">Gesamten Fortschritt zurücksetzen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Curriculum (offizieller Kernlehrplan Physik NRW, Klasse 5–Q2) ----------
+  const CURRICULUM = [
+    { grade:"Handwerkszeug: Schreibweise & Größensystem", topics:[
+      {g:"Fachsprache", t:"Größengleichungen", s:"Größe = Zahlenwert × Einheit, korrektes Aufschreiben von Formeln (z.B. v = s/t statt nur Zahlen)"},
+      {g:"Fachsprache", t:"SI-Basisgrößen & -einheiten", s:"Meter, Kilogramm, Sekunde, Ampere, Kelvin, Mol, Candela; abgeleitete Einheiten"},
+      {g:"Fachsprache", t:"Vorsätze / Zehnerpotenzen", s:"Kilo, Milli, Mikro, Nano, Mega, Giga; wissenschaftliche Schreibweise"},
+      {g:"Fachsprache", t:"Einheiten umrechnen", s:"Umrechnungsfaktoren, Einheitenanalyse zur Fehlerkontrolle"},
+      {g:"Fachsprache", t:"Formeln umstellen", s:"Äquivalenzumformungen, nach einer Variable auflösen"},
+      {g:"Fachsprache", t:"Runden & signifikante Stellen", s:"Messgenauigkeit, sinnvolle Rundung von Ergebnissen"},
+      {g:"Fachsprache", t:"Vektorielle Größen", s:"Schreibweise mit Pfeil, Betrag vs. Richtung, Skalar vs. Vektor"},
+      {g:"Fachsprache", t:"Diagramme & Messwerte", s:"Achsenbeschriftung mit Einheit, Wertetabellen, Fehlerbalken, Ausgleichsgeraden"},
+      {g:"Fachsprache", t:"Formelzeichen-Konventionen", s:"Übliche Symbole (s, v, a, F, E, P, U, I, R, Q, T, λ, ν …), Groß-/Kleinschreibung, Indizes"},
+    ]},
+    { grade:"Klasse 5/6 (Erprobungsstufe)", topics:[
+      {g:"IF1 Temperatur und Wärme", t:"Thermische Energie", s:"Wärme, Temperatur, Temperaturmessung"},
+      {g:"IF1 Temperatur und Wärme", t:"Wärmetransport", s:"Wärmemitführung, Wärmeleitung, Wärmestrahlung, Temperaturausgleich, Wärmedämmung"},
+      {g:"IF1 Temperatur und Wärme", t:"Wirkungen von Wärme", s:"Aggregatzustandsänderungen, Wärmeausdehnung"},
+      {g:"IF2 Elektrischer Strom und Magnetismus", t:"Stromkreise und Schaltungen", s:"Spannungsquellen, Leiter/Nichtleiter, verzweigte Stromkreise, Elektronen in Leitern"},
+      {g:"IF2 Elektrischer Strom und Magnetismus", t:"Wirkungen des elektrischen Stroms", s:"Wärmewirkung, magnetische Wirkung, Gefahren durch Elektrizität"},
+      {g:"IF2 Elektrischer Strom und Magnetismus", t:"Magnetische Kräfte und Felder", s:"Anziehung/Abstoßung, Magnetpole, Feldlinienmodell, Magnetfeld der Erde"},
+      {g:"IF2 Elektrischer Strom und Magnetismus", t:"Magnetisierung", s:"Magnetisierbare Stoffe, Modell der Elementarmagnete"},
+      {g:"IF3 Schall", t:"Schwingungen und Schallwellen", s:"Tonhöhe, Lautstärke, Schallausbreitung, Absorption, Reflexion"},
+      {g:"IF3 Schall", t:"Schallquellen und Schallempfänger", s:"Sender-Empfänger-Modell, Ultraschall, Lärmschutz"},
+      {g:"IF4 Licht", t:"Ausbreitung von Licht", s:"Lichtquellen/-empfänger, Modell des Lichtstrahls, Abbildungen"},
+      {g:"IF4 Licht", t:"Sichtbarkeit von Gegenständen", s:"Streuung, Reflexion, Transmission, Absorption, Schattenbildung"},
+    ]},
+    { grade:"Klasse 7–10 (Sekundarstufe I)", topics:[
+      {g:"IF5 Optische Instrumente", t:"Spiegelungen", s:"Reflexionsgesetz, Bildentstehung am Planspiegel"},
+      {g:"IF5 Optische Instrumente", t:"Lichtbrechung", s:"Brechung an Grenzflächen, Totalreflexion, Lichtleiter, Sammellinsen, Auge, optische Instrumente"},
+      {g:"IF5 Optische Instrumente", t:"Licht und Farben", s:"Spektralzerlegung, Absorption, Farbmischung"},
+      {g:"IF6 Sterne und Weltall", t:"Sonnensystem", s:"Mondphasen, Mond-/Sonnenfinsternisse, Jahreszeiten, Planeten"},
+      {g:"IF6 Sterne und Weltall", t:"Universum", s:"Himmelsobjekte, Sternentwicklung"},
+      {g:"IF7 Bewegung, Kraft und Energie", t:"Bewegungen", s:"Geschwindigkeit, Beschleunigung"},
+      {g:"IF7 Bewegung, Kraft und Energie", t:"Kraft", s:"Bewegungsänderung, Verformung, Wechselwirkungsprinzip, Gewichtskraft/Masse, Kräfteaddition, Reibung"},
+      {g:"IF7 Bewegung, Kraft und Energie", t:"Goldene Regel der Mechanik", s:"Einfache Maschinen (Hebel, Flaschenzug, schiefe Ebene)"},
+      {g:"IF7 Bewegung, Kraft und Energie", t:"Energieformen", s:"Lageenergie, Bewegungsenergie, Spannenergie"},
+      {g:"IF7 Bewegung, Kraft und Energie", t:"Energieumwandlung", s:"Energieerhaltung, Leistung"},
+      {g:"IF8 Druck und Auftrieb", t:"Druck in Flüssigkeiten und Gasen", s:"Dichte, Schweredruck, Auftrieb, Archimedisches Prinzip, Luftdruck"},
+      {g:"IF8 Druck und Auftrieb", t:"Druckmessung", s:"Druck und Kraftwirkungen"},
+      {g:"IF9 Elektrizität", t:"Elektrostatik", s:"Elektrische Ladungen und Felder, Spannung"},
+      {g:"IF9 Elektrizität", t:"Elektrische Stromkreise", s:"Elektronen-Atomrumpf-Modell, Ladungstransport, elektrischer Widerstand, Reihen-/Parallelschaltung, Sicherheitsvorrichtungen"},
+      {g:"IF9 Elektrizität", t:"Elektrische Energie und Leistung", s:"Berechnung von Energie und Leistung im Stromkreis"},
+      {g:"IF10 Ionisierende Strahlung und Kernenergie", t:"Atomaufbau und ionisierende Strahlung", s:"Alpha-, Beta-, Gamma-Strahlung, radioaktiver Zerfall, Halbwertszeit, Röntgenstrahlung"},
+      {g:"IF10 Ionisierende Strahlung und Kernenergie", t:"Wechselwirkung von Strahlung mit Materie", s:"Nachweismethoden, Absorption, biologische Wirkungen, medizinische Anwendung, Schutzmaßnahmen"},
+      {g:"IF10 Ionisierende Strahlung und Kernenergie", t:"Kernenergie", s:"Kernspaltung, Kernfusion, Kernkraftwerke, Endlagerung"},
+      {g:"IF11 Energieversorgung", t:"Induktion und Elektromagnetismus", s:"Elektromotor, Generator, Wechselspannung, Transformator"},
+      {g:"IF11 Energieversorgung", t:"Bereitstellung und Nutzung von Energie", s:"Kraftwerke, regenerative Energieanlagen, Energieübertragung, Energieentwertung, Wirkungsgrad, Nachhaltigkeit"},
+    ]},
+    { grade:"Einführungsphase (EF)", topics:[
+      {g:"Grundlagen der Mechanik", t:"Kinematik", s:"Gleichförmige & gleichmäßig beschleunigte Bewegung, freier Fall, waagerechter Wurf, vektorielle Größen"},
+      {g:"Grundlagen der Mechanik", t:"Dynamik", s:"Newton'sche Gesetze, beschleunigende Kräfte, Kräftegleichgewicht, Reibungskräfte"},
+      {g:"Grundlagen der Mechanik", t:"Erhaltungssätze", s:"Impuls, Energie (Lage-, Bewegungs-, Spannenergie), Energiebilanzen, Stoßvorgänge"},
+      {g:"Kreisbewegung, Gravitation & physikalische Weltbilder", t:"Kreisbewegung", s:"Gleichförmige Kreisbewegung, Zentripetalkraft"},
+      {g:"Kreisbewegung, Gravitation & physikalische Weltbilder", t:"Gravitation", s:"Schwerkraft, Newton'sches Gravitationsgesetz, Kepler'sche Gesetze, Gravitationsfeld"},
+      {g:"Kreisbewegung, Gravitation & physikalische Weltbilder", t:"Wandel physikalischer Weltbilder", s:"Geo-/heliozentrisches Weltbild, spezielle Relativitätstheorie (Grundprinzipien), Zeitdilatation"},
+    ]},
+    { grade:"Q1 / Q2 — Grundkurs", topics:[
+      {g:"Klassische Wellen & geladene Teilchen in Feldern", t:"Klassische Wellen", s:"Federpendel, mechanische harmonische Schwingungen/Wellen, Huygens'sches Prinzip, Reflexion, Brechung, Beugung, Superposition, Polarisation"},
+      {g:"Klassische Wellen & geladene Teilchen in Feldern", t:"Teilchen in Feldern", s:"Elektrisches & magnetisches Feld, Feldstärke, Spannung, magnetische Flussdichte, Bahnformen geladener Teilchen"},
+      {g:"Quantenobjekte", t:"Teilchenaspekte von Photonen", s:"Energiequantelung von Licht, Photoeffekt"},
+      {g:"Quantenobjekte", t:"Wellenaspekt von Elektronen", s:"De-Broglie-Wellenlänge, Interferenz von Elektronen am Doppelspalt"},
+      {g:"Quantenobjekte", t:"Photon und Elektron als Quantenobjekte", s:"Wellen- und Teilchenmodell, Kopenhagener Deutung"},
+      {g:"Elektrodynamik & Energieübertragung", t:"Elektrodynamik", s:"Magnetischer Fluss, elektromagnetische Induktion, Induktionsgesetz, Wechselspannung, Kondensator (Auf-/Entladung)"},
+      {g:"Elektrodynamik & Energieübertragung", t:"Energieübertragung", s:"Generator, Transformator, elektromagnetische Schwingung"},
+      {g:"Strahlung & Materie", t:"Strahlung", s:"Elektromagnetisches Spektrum, ionisierende Strahlung, Geiger-Müller-Zählrohr, biologische Wirkungen"},
+      {g:"Strahlung & Materie", t:"Atomphysik", s:"Linienspektrum, Energieniveauschema, Kern-Hülle-Modell, Röntgenstrahlung"},
+      {g:"Strahlung & Materie", t:"Kernphysik", s:"Nukleonen, Zerfallsprozesse, Kernumwandlungen, Kernspaltung/-fusion"},
+    ]},
+    { grade:"Q1 / Q2 — Leistungskurs", topics:[
+      {g:"Ladungen, Felder & Induktion", t:"Elektrische Ladungen und Felder", s:"Ladungen, elektrische Felder/-feldstärke, Coulomb'sches Gesetz, elektrisches Potential/Spannung, Kondensator/Kapazität, magnetische Felder/-flussdichte"},
+      {g:"Ladungen, Felder & Induktion", t:"Bewegungen in Feldern", s:"Geladene Teilchen in Längs-/Querfeldern, Lorentzkraft, gekreuzte elektrische/magnetische Felder"},
+      {g:"Ladungen, Felder & Induktion", t:"Elektromagnetische Induktion", s:"Magnetischer Fluss, Induktionsgesetz, Lenz'sche Regel, Selbstinduktion, Induktivität"},
+      {g:"Schwingende Systeme & Wellen", t:"Schwingungen und Wellen", s:"Harmonische Schwingungen & Kenngrößen, Huygens'sches Prinzip, Reflexion, Brechung, Beugung, Polarisation, Superposition, Michelson-Interferometer"},
+      {g:"Schwingende Systeme & Wellen", t:"Schwingende Systeme", s:"Federpendel, Fadenpendel, Resonanz, Schwingkreis, Hertz'scher Dipol"},
+      {g:"Quantenphysik", t:"Teilchenaspekte von Photonen", s:"Energiequantelung von Licht, Photoeffekt, Bremsstrahlung"},
+      {g:"Quantenphysik", t:"Photonen und Elektronen als Quantenobjekte", s:"Doppelspaltexperiment, Bragg-Reflexion, Elektronenbeugung, Wahrscheinlichkeitsinterpretation, Delayed-Choice-Experiment, Kopenhagener/statistische Deutung"},
+      {g:"Atom- und Kernphysik", t:"Atommodelle", s:"Eindimensionaler Potentialtopf, Energieniveauschema, Röntgenstrahlung"},
+      {g:"Atom- und Kernphysik", t:"Ionisierende Strahlung", s:"Strahlungsarten, Nachweismöglichkeiten, Eigenschaften, Absorption ionisierender Strahlung"},
+      {g:"Atom- und Kernphysik", t:"Radioaktiver Zerfall", s:"Kernaufbau, Zerfallsreihen, Zerfallsgesetz, Halbwertszeit, Altersbestimmung"},
+      {g:"Atom- und Kernphysik", t:"Kernspaltung und -fusion", s:"Bindungsenergien, Massendefekt, Kettenreaktion"},
+    ]},
+  ];
+  // Flatten with stable ids
+  const TOPICS = [];
+  CURRICULUM.forEach((stage,gi)=>{
+    stage.topics.forEach((top,ti)=>{
+      TOPICS.push({ id: gi+"_"+ti, grade: stage.grade, group: top.g||null, name: top.t, details: top.s });
+    });
+  });
+
+  // ---------- OpenAI Modelle (Preise pro 1M Tokens; Bild ≈ 1229 Tokens bei High/Original-Detail) ----------
+  const IMG_TOKENS = 1229;
+  const MODELS = [
+    { id:"gpt-5.6-luna",        label:"gpt-5.6-luna",        inP:0.20,  outP:1.20  },
+    { id:"gpt-5.6-terra",       label:"gpt-5.6-terra",       inP:2.00,  outP:12.00 },
+    { id:"gpt-5.6-sol",         label:"gpt-5.6-sol",         inP:4.00,  outP:20.00 },
+    { id:"gpt-6-astra",         label:"gpt-6-astra",         inP:10.00, outP:50.00 },
+    { id:"gpt-5.6-cyber",       label:"gpt-5.6-cyber",       inP:12.50, outP:75.00 },
+    { id:"gpt-5.3-codex",       label:"gpt-5.3-codex",       inP:1.75,  outP:14.00 },
+    { id:"o4-mini-2025-04-16",  label:"o4-mini-2025-04-16",  inP:4.00,  outP:16.00 },
+    { id:"gpt-realtime-2.1",    label:"gpt-realtime-2.1",    inP:4.00,  outP:24.00 },
+    { id:"gpt-realtime-2.1-mini", label:"gpt-realtime-2.1-mini", inP:0.60, outP:2.40 },
+    { id:"chat-latest",         label:"chat-latest",         inP:5.00,  outP:30.00 },
+    { id:"gpt-rosalind-research", label:"gpt-rosalind-research", inP:5.00, outP:25.00 },
+  ];
+  function imgCost(m){ return (m.inP * IMG_TOKENS / 1e6); }
+  function fmtUsd(v){ return v < 0.01 ? "$"+v.toFixed(5) : "$"+v.toFixed(4); }
+
+  // ---------- State (Settings/API-Key werden geräteweit über alle Physik-Dateien geteilt) ----------
+  const SETTINGS_KEY = "physikAiSharedSettings";
+  const LOG_KEY = "physikTrainerLogs"; // { topicId: { skill, status, log:[{who,type,text,ts}] } }
+
+  function loadSettings(){
+    const def = { apiKey:"", model:"gpt-5.6-terra", kNormal:24, kTest:40, threshold:400, penWidth:3 };
+    try{ return Object.assign(def, JSON.parse(localStorage.getItem(SETTINGS_KEY))||{}); }catch(e){ return def; }
+  }
+  function saveSettings(){ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+  function loadLogs(){ try{ return JSON.parse(localStorage.getItem(LOG_KEY))||{}; }catch(e){ return {}; } }
+  function saveLogs(){ localStorage.setItem(LOG_KEY, JSON.stringify(logs)); }
+
+  let settings = loadSettings();
+  let logs = loadLogs();
+  let testMode = false;
+  let activeTopicId = null;
+
+  const SKILL_DIMS = ["verstaendnis","anwendung","rechnung"];
+  const SKILL_LABELS = {verstaendnis:"Verständnis", anwendung:"Anwendung", rechnung:"Rechnung"};
+
+  function topicRecord(id){
+    if(!logs[id]) logs[id] = { skill:{verstaendnis:0,anwendung:0,rechnung:0}, status:"offen", log:[] };
+    // Migration von altem einzelnem Skill-Wert
+    if(typeof logs[id].skill === "number"){
+      const v = logs[id].skill;
+      logs[id].skill = {verstaendnis:v, anwendung:v, rechnung:v};
+    }
+    return logs[id];
+  }
+  function avgSkill(rec){
+    return (rec.skill.verstaendnis + rec.skill.anwendung + rec.skill.rechnung)/3;
+  }
+  function topicMeta(id){ return TOPICS.find(t=>t.id===id); }
+
+  // ---------- DOM refs ----------
+  const $ = id => document.getElementById(id);
+  const testModeEl = $("testMode");
+  const idleView = $("idleView"), taskView = $("taskView");
+  const btnStart = $("btnStart"), btnSubmit = $("btnSubmit");
+  const taskGrp = $("taskGrp"), taskTopic = $("taskTopic");
+  const feedbackBox = $("feedbackBox");
+  const errorSlot = $("errorSlot");
+  const checklistModal = $("checklistModal"), settingsModal = $("settingsModal");
+  const checklistBody = $("checklistBody");
+
+  function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  // ---------- Canvas (drawing, touch/pen/mouse) ----------
+  const canvas = $("canvas");
+  const ctx = canvas.getContext("2d");
+  let drawing = false, strokes = [], currentStroke = null;
+
+  function resizeCanvas(){
+    const wrap = $("canvasWrap");
+    const w = wrap.clientWidth;
+    const h = Math.round(w * 0.6);
+    const ratio = window.devicePixelRatio || 1;
+    canvas.width = w*ratio; canvas.height = h*ratio;
+    canvas.style.height = h+"px";
+    ctx.setTransform(ratio,0,0,ratio,0,0);
+    redraw();
+  }
+  window.addEventListener("resize", resizeCanvas);
+
+  function redraw(){
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.lineCap = "round"; ctx.lineJoin="round";
+    ctx.strokeStyle = "#111";
+    strokes.forEach(s=>{
+      ctx.lineWidth = s.width;
+      ctx.beginPath();
+      s.points.forEach((p,i)=> i===0 ? ctx.moveTo(p.x,p.y) : ctx.lineTo(p.x,p.y));
+      ctx.stroke();
+    });
+  }
+  function getPos(e){
+    const r = canvas.getBoundingClientRect();
+    const t = e.touches ? e.touches[0] : e;
+    return {x:t.clientX-r.left, y:t.clientY-r.top};
+  }
+  function startDraw(e){
+    e.preventDefault();
+    drawing = true;
+    currentStroke = {width: parseInt(settings.penWidth,10), points:[getPos(e)]};
+    strokes.push(currentStroke);
+  }
+  function moveDraw(e){
+    if(!drawing) return;
+    e.preventDefault();
+    currentStroke.points.push(getPos(e));
+    redraw();
+  }
+  function endDraw(){ drawing = false; currentStroke = null; }
+
+  ["mousedown","touchstart","pointerdown"].forEach(ev=>canvas.addEventListener(ev,startDraw,{passive:false}));
+  ["mousemove","touchmove","pointermove"].forEach(ev=>canvas.addEventListener(ev,moveDraw,{passive:false}));
+  ["mouseup","mouseleave","touchend","pointerup"].forEach(ev=>canvas.addEventListener(ev,endDraw,{passive:false}));
+
+  $("btnUndo").addEventListener("click", ()=>{ strokes.pop(); penRawStrokes.pop(); redraw(); });
+  $("btnClear").addEventListener("click", ()=>{ strokes=strokes.filter(s=>!s.fromPen); penRawStrokes=[]; redraw(); });
+
+  // ---------- Neolab-Stift (Web Bluetooth über web_pen_sdk) ----------
+  // Erfordert Chrome/Edge + https:// oder http://localhost (nicht file://).
+  let penRawStrokes = []; // rohe Ncode-Koordinaten vom Stift, threshold-unabhängig
+  let penCurrentRaw = null;
+
+  function rescalePenAndRedraw(){
+    strokes = strokes.filter(s=>!s.fromPen);
+    const allPts = penRawStrokes.flatMap(s=>s.points);
+    if(allPts.length>0){
+      const xs = allPts.map(p=>p.x), ys = allPts.map(p=>p.y);
+      const minX=Math.min(...xs), maxX=Math.max(...xs), minY=Math.min(...ys), maxY=Math.max(...ys);
+      const w = $("canvasWrap").clientWidth, h = Math.round(w*0.6);
+      const pad = 24;
+      const spanX = Math.max(1, maxX-minX), spanY = Math.max(1, maxY-minY);
+      const scale = Math.min((w-2*pad)/spanX, (h-2*pad)/spanY);
+      const offX = pad + ((w-2*pad) - spanX*scale)/2;
+      const offY = pad + ((h-2*pad) - spanY*scale)/2;
+      penRawStrokes.forEach(s=>{
+        strokes.push({
+          fromPen:true,
+          width: parseInt(settings.penWidth,10),
+          points: s.points.map(p=>({x: offX+(p.x-minX)*scale, y: offY+(p.y-minY)*scale}))
+        });
+      });
+    }
+    redraw();
+  }
+
+  function setPenStatus(connected, text){
+    $("penDot").classList.toggle("on", !!connected);
+    $("penStatusTxt").textContent = text || (connected ? "Neolab-Stift: verbunden" : "Neolab-Stift: nicht verbunden");
+  }
+
+  window.__penBridge = {
+    onStatus: setPenStatus,
+    onDown: (x,y)=>{ penCurrentRaw = {points:[{x,y}]}; penRawStrokes.push(penCurrentRaw); },
+    onMove: (x,y)=>{ if(penCurrentRaw){ penCurrentRaw.points.push({x,y}); rescalePenAndRedraw(); } },
+    onUp: ()=>{ penCurrentRaw=null; rescalePenAndRedraw(); }
+  };
+
+  $("btnPenConnect").addEventListener("click", ()=>{
+    if(window.__penConnect) window.__penConnect();
+    else {
+      const reason = $("penStatusTxt").textContent || "unbekannt";
+      showError('Stift-Verbindung nicht bereit. Aktueller Status: "'+reason+'". Details stehen in der Browser-Konsole (Rechtsklick → Untersuchen → Console).');
+    }
+  });
+
+  let pastedImage = null;
+  $("fileInput").addEventListener("change", e=>{
+    const f = e.target.files[0];
+    if(!f) return;
+    const reader = new FileReader();
+    reader.onload = ev=>{ pastedImage = ev.target.result; };
+    reader.readAsDataURL(f);
+  });
+
+  // ---------- Overview rendering ----------
+  function renderOverview(){
+    let sum=0;
+    TOPICS.forEach(t=> sum += avgSkill(topicRecord(t.id)));
+    const avg = Math.round(sum/TOPICS.length);
+    $("overallLbl").textContent = avg + " Ø";
+    $("overallBar").style.width = Math.min(100, avg/settings.threshold*100)+"%";
+
+    const open = TOPICS.filter(t=>topicRecord(t.id).status!=="beherrscht")
+      .sort((a,b)=>avgSkill(topicRecord(a.id)) - avgSkill(topicRecord(b.id)))
+      .slice(0,6);
+    $("deficitRow").innerHTML = open.map(t=>{
+      const rec = topicRecord(t.id);
+      return `<div class="deficit-chip"><div class="val">${Math.round(avgSkill(rec))}</div><div class="lbl">${escapeHtml(t.name)}</div></div>`;
+    }).join("") || '<div class="muted" style="padding:4px;">Alle Themen beherrscht 🎉</div>';
+  }
+
+  function renderSkillBars(){
+    if(!activeTopicId) return;
+    const rec = topicRecord(activeTopicId);
+    $("skillBars").innerHTML = SKILL_DIMS.map(d=>{
+      const v = Math.round(rec.skill[d]);
+      const pct = Math.min(100, v/settings.threshold*100);
+      return `<div class="skillbar"><div class="lbl"><span>${SKILL_LABELS[d]}</span><span>${v}</span></div><div class="track"><div class="fill" style="width:${pct}%"></div></div></div>`;
+    }).join("");
+  }
+
+  const TYPE_LABELS = {
+    erklaerung:"Erklärung", testfrage:"Aktuelle Aufgabe", ergebnis:"Ergebnis",
+    wiederholung:"Wiederholung", abschluss:"Abschluss", einschaetzung:"Skill-Update", antwort:"Antwort"
+  };
+  function renderMarkdown(text){
+    try{
+      if(window.marked) return marked.parse(text||"", {breaks:true});
+    }catch(e){}
+    return escapeHtml(text||"").replace(/\n/g,"<br>");
+  }
+  function renderChatLog(){
+    if(!activeTopicId){ $("chatLog").innerHTML=""; return; }
+    const rec = topicRecord(activeTopicId);
+    const relevant = rec.log.filter(e=>e.who==="ki"||e.who==="du");
+    let lastKiIdx = -1;
+    relevant.forEach((e,i)=>{ if(e.who==="ki") lastKiIdx = i; });
+    const box = $("chatLog");
+    box.innerHTML = relevant.map((e,i)=>{
+      const cls = e.who==="ki"?"ki"+(i===lastKiIdx?" current":""):"du";
+      const tag = e.who==="ki" ? (TYPE_LABELS[e.type]||e.type||"KI") : "Du";
+      return `<div class="chatmsg ${cls}"><span class="tag">${escapeHtml(tag)}</span>${renderMarkdown(e.text)}</div>`;
+    }).join("");
+    if(window.renderMathInElement){
+      try{
+        renderMathInElement(box, {
+          delimiters:[
+            {left:"$$", right:"$$", display:true},
+            {left:"\\[", right:"\\]", display:true},
+            {left:"$", right:"$", display:false},
+            {left:"\\(", right:"\\)", display:false}
+          ],
+          throwOnError:false
+        });
+      }catch(e){}
+    }
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function renderChecklist(){
+    const byGrade = {};
+    TOPICS.forEach(t=>{
+      const rec = topicRecord(t.id);
+      (byGrade[t.grade]=byGrade[t.grade]||[]).push({t,rec});
+    });
+    const grades = Object.keys(byGrade);
+    checklistBody.innerHTML = `<p class="muted">${TOPICS.length} Themen insgesamt, ${TOPICS.filter(t=>topicRecord(t.id).status==="beherrscht").length} beherrscht.</p>` + grades.map(grade=>{
+      const items = byGrade[grade];
+      return `<details><summary>${escapeHtml(grade)} (${items.length})</summary>` +
+        items.map(({t,rec})=>{
+          const solved = rec.log.filter(e=>e.type==="ergebnis"||e.type==="abschluss");
+          const summary = solved.length ? solved.map(e=>escapeHtml(e.text)).join(" · ") : (rec.log.length ? "in Bearbeitung, noch keine Aufgabe abgeschlossen" : "noch nicht begonnen");
+          const skillTxt = SKILL_DIMS.map(d=>SKILL_LABELS[d]+" "+Math.round(rec.skill[d])).join(", ");
+          return `<details style="margin-left:10px;"><summary>${escapeHtml(t.name)} — ${skillTxt} (${rec.status})</summary>
+            <div class="check-item"><span>${summary}</span></div></details>`;
+        }).join("") +
+        `</details>`;
+    }).join("");
+  }
+
+  // ---------- Settings modal ----------
+  function populateModelUI(){
+    $("modelSelect").innerHTML = MODELS.map(m=>
+      `<option value="${m.id}">${m.label} — $${m.inP}/${m.outP} pro 1M · Bild ≈ ${fmtUsd(imgCost(m))}</option>`
+    ).join("");
+    $("priceTable").querySelector("tbody").innerHTML = MODELS.map(m=>
+      `<tr style="border-top:1px solid var(--border);"><td style="padding:4px 6px;">${m.label}</td><td style="padding:4px 6px;">$${m.inP}</td><td style="padding:4px 6px;">$${m.outP}</td><td style="padding:4px 6px;">${fmtUsd(imgCost(m))}</td></tr>`
+    ).join("");
+  }
+  function updateModelPriceInfo(){
+    const m = MODELS.find(x=>x.id===settings.model) || MODELS[0];
+    $("modelPriceInfo").textContent = `Input $${m.inP}/1M · Output $${m.outP}/1M · ein Bild ≈ ${IMG_TOKENS} Tokens ≈ ${fmtUsd(imgCost(m))}`;
+  }
+  function fillSettingsForm(){
+    populateModelUI();
+    $("apiKeyInput").value = settings.apiKey;
+    $("modelSelect").value = settings.model;
+    updateModelPriceInfo();
+    $("kNormal").value = settings.kNormal; $("kNormalVal").textContent = settings.kNormal;
+    $("kTest").value = settings.kTest; $("kTestVal").textContent = settings.kTest;
+    $("threshold").value = settings.threshold; $("thresholdVal").textContent = settings.threshold;
+    $("penWidth").value = settings.penWidth; $("penWidthVal").textContent = settings.penWidth;
+  }
+  ["apiKeyInput","modelSelect"].forEach(id=>{
+    $(id).addEventListener("change", ()=>{
+      settings.apiKey = $("apiKeyInput").value.trim();
+      settings.model = $("modelSelect").value;
+      saveSettings();
+      updateModelPriceInfo();
+    });
+  });
+  [["kNormal","kNormalVal"],["kTest","kTestVal"],["threshold","thresholdVal"],["penWidth","penWidthVal"]].forEach(([id,lbl])=>{
+    $(id).addEventListener("input", ()=>{
+      $(lbl).textContent = $(id).value;
+      settings[id] = parseInt($(id).value,10);
+      saveSettings();
+      renderOverview();
+    });
+  });
+  $("btnResetProgress").addEventListener("click", ()=>{
+    if(!confirm("Gesamten Fortschritt (alle Themen, alle Logs) wirklich löschen?")) return;
+    logs = {}; saveLogs();
+    renderOverview(); resetTaskView();
+  });
+
+  $("btnSettings").addEventListener("click", ()=>{ fillSettingsForm(); settingsModal.style.display="flex"; });
+  $("btnChecklist").addEventListener("click", ()=>{ renderChecklist(); checklistModal.style.display="flex"; });
+  document.querySelectorAll("[data-close]").forEach(b=>{
+    b.addEventListener("click", ()=> $(b.dataset.close).style.display="none");
+  });
+
+  testModeEl.addEventListener("change", ()=>{ testMode = testModeEl.checked; });
+
+  // ---------- AI ----------
+  const SYSTEM_PROMPT = `Du bist ein adaptiver Physik-Lehrer/-Prüfer für einen Gymnasiasten der Klasse 11 (EF) in NRW, Deutschland. Der Themenkatalog ist durch den offiziellen Kernlehrplan fest vorgegeben — du erfindest KEINE eigenen Themen, sondern wählst und bearbeitest ausschließlich Themen aus der übergebenen Liste "available_topics".
+
+Der Skill pro Thema hat DREI Dimensionen, jede 0–"mastery_threshold": "verstaendnis" (kann er die Konzepte erklären/einordnen), "anwendung" (kann er sie auf neue Situationen übertragen), "rechnung" (kann er die zugehörigen Rechnungen sauber durchführen). Bewerte und aktualisiere sie EINZELN, nicht pauschal gleich — z.B. kann jemand ein Konzept verstehen, aber schlecht rechnen.
+
+Der Schüler navigiert NICHT selbst zwischen Aufgaben. Du steuerst den Ablauf, aber er darf jederzeit Fragen stellen oder um eine Erklärung bitten:
+- "action":"pick_topic": Wähle aus "available_topics" das sinnvollste nächste Thema (bevorzugt niedrige Skills / Status "offen", grundsätzlich in Lehrplan-Reihenfolge, Vorwissenslücken zuerst). Erkläre das Thema knapp aber vollständig von Grund auf (log_type "erklaerung") und gib danach direkt die erste konkrete Aufgabe dazu in "task".
+- "action":"evaluate": Die Lösung zur zuvor gestellten Aufgabe des "current_topic" kommt als Bild ("current_topic_log"/image), als Text in "user_message", oder als beides zusammen (dann gehören Bild und Text zur selben Lösung, lies beide). Bewerte fachlich korrekt, kurzes konkretes Feedback auf Deutsch.
+- "action":"ask": Der Schüler stellt in "user_message" eine freie Frage oder bittet um eine (erneute/tiefere) Erklärung zum aktuellen Thema. Beantworte sie ausführlich und verständlich (log_type "erklaerung"). Das verändert die Skills in der Regel NICHT (skill_delta alle 0), außer die Frage selbst zeigt klar Verständnis oder eine Lücke.
+- "skill_delta": Objekt {"verstaendnis":Zahl,"anwendung":Zahl,"rechnung":Zahl}, jede kann positiv, negativ oder 0 sein, skaliert grob am "k_factor". Bei action=pick_topic und den meisten action=ask: alle 0.
+- "topic_complete": true nur, wenn alle drei Dimensionen über mehrere unterschiedliche Aufgaben hinweg nahe/über "mastery_threshold" liegen. Bei Scheitern: false, verwandte Aufgabe im selben Thema wiederholen.
+- Wenn "topic_complete" true ist, wähle im selben Response direkt das nächste Thema aus "available_topics" und liefere dessen Erklärung + erste Aufgabe.
+- Du bekommst für das aktuelle Thema den GESAMTEN bisherigen Verlauf ("current_topic_log"). Von allen anderen Themen nur {Themenname: Skill-Zahl (Mittelwert)} in "other_topics_skill_only" — nur zur groben Einordnung.
+
+Formatierung der Texte in "task"/"feedback": Diese werden als Markdown gerendert (inkl. Tabellen, Listen, **fett**) und LaTeX-Formeln werden automatisch dargestellt. Nutze das aktiv wie in einem normalen Chat: Absätze für Struktur, Markdown-Tabellen für Wertetabellen, LaTeX mit $...$ für Formeln inline (z.B. $v = \\frac{s}{t}$) und $$...$$ für freistehende Gleichungen/Herleitungen. Keine rohen JSON- oder Codeblock-Zeichen im Fließtext.
+
+Antworte AUSSCHLIESSLICH als valides JSON ohne Markdown-Codeblock, exakt in diesem Schema:
+{
+  "topic_id": "id des Themas, zu dem 'task'/'message' gehört (aus available_topics oder current_topic)",
+  "task": "aktuelle/nächste konkrete Aufgabenstellung, oder Erklärung/Antwort auf die Frage bei action=ask",
+  "evaluation": "correct" | "partial" | "incorrect" | null,
+  "feedback": "kurzes Feedback zur eingereichten Lösung, null wenn nicht zutreffend",
+  "log_type": "erklaerung" | "testfrage" | "ergebnis" | "wiederholung" | "abschluss" | "antwort",
+  "skill_delta": {"verstaendnis":0,"anwendung":0,"rechnung":0},
+  "skill_reasoning": "kurze Begründung, leer wenn alle Deltas 0",
+  "topic_complete": true | false
+}`;
+
+  function buildPayload(action, dataUrl, userMessage){
+    const others = {};
+    TOPICS.forEach(t=>{ if(t.id!==activeTopicId) others[t.name] = Math.round(avgSkill(topicRecord(t.id))); });
+    const payload = {
+      action,
+      test_mode: testMode,
+      k_factor: testMode ? settings.kTest : settings.kNormal,
+      mastery_threshold: settings.threshold,
+      current_topic: activeTopicId ? Object.assign({id:activeTopicId}, topicMeta(activeTopicId), {skill: topicRecord(activeTopicId).skill, status: topicRecord(activeTopicId).status}) : null,
+      current_topic_log: activeTopicId ? topicRecord(activeTopicId).log.map(e=>({who:e.who,type:e.type||null,text:e.text})) : [],
+      other_topics_skill_only: others,
+      available_topics: TOPICS.filter(t=>topicRecord(t.id).status!=="beherrscht").map(t=>({id:t.id, grade:t.grade, group:t.group, name:t.name, details:t.details, skill: Math.round(avgSkill(topicRecord(t.id)))})),
+      user_message: userMessage || null
+    };
+    const content = [{type:"text", text: JSON.stringify(payload)}];
+    if(dataUrl) content.push({type:"image_url", image_url:{url: dataUrl}});
+    return content;
+  }
+
+  async function callAI(action, dataUrl, userMessage){
+    if(!settings.apiKey) throw new Error("Bitte zuerst einen OpenAI API-Key in den Einstellungen eintragen.");
+    const body = {
+      model: settings.model,
+      messages:[
+        {role:"system", content: SYSTEM_PROMPT},
+        {role:"user", content: buildPayload(action, dataUrl, userMessage)}
+      ],
+      response_format:{type:"json_object"}
+    };
+    const res = await fetch("https://api.openai.com/v1/chat/completions", {
+      method:"POST",
+      headers:{ "Content-Type":"application/json", "Authorization":"Bearer "+settings.apiKey },
+      body: JSON.stringify(body)
+    });
+    if(!res.ok){
+      const t = await res.text().catch(()=> "");
+      throw new Error("API-Fehler ("+res.status+"): "+t.slice(0,300));
+    }
+    const json = await res.json();
+    const raw = json.choices?.[0]?.message?.content;
+    if(!raw) throw new Error("Leere Antwort vom Modell.");
+    try{ return JSON.parse(raw); }
+    catch(e){ throw new Error("Antwort war kein gültiges JSON."); }
+  }
+
+  function setBusy(btn, busy, label){
+    btn.disabled = busy;
+    btn.innerHTML = busy ? '<span class="spinner"></span>'+label : label;
+  }
+  function showError(msg){ errorSlot.innerHTML = msg ? `<div class="errbox">${escapeHtml(msg)}</div>` : ""; }
+
+  function resetTaskView(){
+    idleView.style.display="block"; taskView.style.display="none";
+    feedbackBox.innerHTML=""; strokes=[]; pastedImage=null;
+    activeTopicId = null;
+  }
+
+  function addLog(topicId,who,type,text){
+    const rec = topicRecord(topicId);
+    rec.log.push({who,type,text,ts:Date.now()});
+    saveLogs();
+  }
+
+  function showTask(resp){
+    const meta = topicMeta(resp.topic_id) || topicMeta(activeTopicId);
+    activeTopicId = meta.id;
+    idleView.style.display="none"; taskView.style.display="block";
+    taskGrp.textContent = meta.grade + (meta.group ? " · "+meta.group : "");
+    taskTopic.textContent = meta.name;
+    strokes=[]; pastedImage=null;
+    renderSkillBars();
+    renderChatLog();
+    setTimeout(resizeCanvas,0);
+  }
+
+  function applySkillDelta(rec, delta, reasoning){
+    if(!delta) return false;
+    let changed = false;
+    SKILL_DIMS.forEach(d=>{
+      const dv = Number(delta[d]||0);
+      if(dv){ rec.skill[d] = Math.max(0, rec.skill[d] + dv); changed = true; }
+    });
+    if(changed){
+      const parts = SKILL_DIMS.filter(d=>delta[d]).map(d=>SKILL_LABELS[d]+" "+(delta[d]>0?"+":"")+delta[d]);
+      addLog(activeTopicId,"ki","einschaetzung", parts.join(", ")+(reasoning?": "+reasoning:""));
+    }
+    return changed;
+  }
+
+  btnStart.addEventListener("click", async ()=>{
+    showError("");
+    setBusy(btnStart, true, " Thema wird gewählt…");
+    try{
+      const resp = await callAI("pick_topic", null);
+      const meta = topicMeta(resp.topic_id);
+      if(!meta) throw new Error("KI hat eine unbekannte Themen-ID zurückgegeben.");
+      activeTopicId = meta.id;
+      addLog(meta.id,"ki",resp.log_type||"erklaerung", resp.task||"");
+      const rec = topicRecord(meta.id);
+      if(rec.status==="offen") rec.status="in_bearbeitung";
+      saveLogs();
+      showTask(resp);
+      renderOverview();
+    }catch(e){ showError(e.message); }
+    finally{ setBusy(btnStart, false, "Start"); }
+  });
+
+  btnSubmit.addEventListener("click", async ()=>{
+    showError("");
+    feedbackBox.innerHTML = "";
+    const solutionText = $("solutionText").value.trim();
+    let dataUrl = pastedImage;
+    if(!dataUrl && strokes.length>0){
+      dataUrl = canvas.toDataURL("image/png");
+    }
+    if(!dataUrl && !solutionText){
+      showError("Bitte eine Lösung zeichnen, ein Bild einfügen oder als Text eingeben.");
+      return;
+    }
+    addLog(activeTopicId,"du",null, solutionText ? (dataUrl ? "[Bild-Lösung + Text] "+solutionText : solutionText) : "[Bild-Lösung eingereicht]");
+    $("solutionText").value = "";
+    setBusy(btnSubmit, true, " Wird bewertet…");
+    try{
+      const resp = await callAI("evaluate", dataUrl, solutionText || null);
+      const rec = topicRecord(activeTopicId);
+      applySkillDelta(rec, resp.skill_delta, resp.skill_reasoning);
+      addLog(activeTopicId,"ki", resp.log_type||"ergebnis", resp.feedback||"");
+
+      const cls = resp.evaluation==="correct"?"correct":resp.evaluation==="partial"?"partial":"incorrect";
+      feedbackBox.innerHTML = `<div class="feedback ${cls}">${escapeHtml(resp.feedback||"")}</div>`;
+
+      if(resp.topic_complete){
+        rec.status = "beherrscht";
+        addLog(activeTopicId,"system","abschluss","Thema als beherrscht markiert.");
+        saveLogs();
+        feedbackBox.innerHTML += `<div class="muted" style="margin-top:8px;">✅ Thema abgeschlossen. Nächstes Thema wird geladen…</div>`;
+        setTimeout(()=>{
+          const newMeta = topicMeta(resp.topic_id);
+          if(newMeta){
+            addLog(newMeta.id,"ki", resp.log_type||"erklaerung", resp.task||"");
+            if(topicRecord(newMeta.id).status==="offen") topicRecord(newMeta.id).status="in_bearbeitung";
+            saveLogs();
+          }
+          showTask(resp); feedbackBox.innerHTML=""; renderOverview();
+        }, 1400);
+      } else {
+        rec.status = "in_bearbeitung";
+        addLog(activeTopicId,"ki","testfrage", resp.task||"");
+        saveLogs();
+        showTask(resp);
+      }
+      renderOverview();
+    }catch(e){ showError(e.message); }
+    finally{ setBusy(btnSubmit, false, "Lösung einschicken"); }
+  });
+
+  $("btnAsk").addEventListener("click", async ()=>{
+    const text = $("chatInput").value.trim();
+    if(!text || !activeTopicId) return;
+    showError("");
+    addLog(activeTopicId,"du",null,text);
+    $("chatInput").value = "";
+    renderChatLog();
+    setBusy($("btnAsk"), true, "…");
+    try{
+      const resp = await callAI("ask", null, text);
+      const rec = topicRecord(activeTopicId);
+      applySkillDelta(rec, resp.skill_delta, resp.skill_reasoning);
+      addLog(activeTopicId,"ki", resp.log_type||"erklaerung", resp.task||resp.feedback||"");
+      saveLogs();
+      renderSkillBars();
+      renderChatLog();
+      renderOverview();
+    }catch(e){ showError(e.message); }
+    finally{ setBusy($("btnAsk"), false, "Fragen"); }
+  });
+  $("chatInput").addEventListener("keydown", e=>{
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); $("btnAsk").click(); }
+  });
+
+  // ---------- Init ----------
+  testModeEl.checked = testMode;
+  renderOverview();
+  resetTaskView();
+  window.addEventListener("load", resizeCanvas);
+  resizeCanvas();
+})();
+</script>
+
+<script type="module">
+  // Neolab-Stift-Bridge: lädt gezielt nur die BLE/Parser-Teilmodule des offiziellen
+  // Web-SDK (web_pen_sdk) per esm.sh — NICHT das Gesamtpaket, dessen index.js
+  // zusätzlich Firebase/jQuery/JSZip/Node-Builtins lädt und im Browser bricht.
+  // Funktioniert nur unter https:// oder http://localhost, in Chrome/Edge.
+  const bridge = window.__penBridge;
+  if(!("bluetooth" in navigator)){
+    bridge.onStatus(false, "Neolab-Stift: Web Bluetooth nicht verfügbar (Chrome/Edge + http://localhost oder https:// nötig)");
+  } else {
+    try{
+      const [penHelperMod, penMsgMod, dotMod] = await Promise.all([
+        import("https://esm.sh/web_pen_sdk@0.8.0/dist/PenCotroller/PenHelper.js?bundle"),
+        import("https://esm.sh/web_pen_sdk@0.8.0/dist/API/PenMessageType.js?bundle"),
+        import("https://esm.sh/web_pen_sdk@0.8.0/dist/API/Dot.js?bundle"),
+      ]);
+      const PenHelper = penHelperMod.default;
+      const PenMessageType = penMsgMod.default;
+      const { DotTypes } = dotMod;
+
+      PenHelper.messageCallback = (mac, type) => {
+        if(type === PenMessageType.PEN_CONNECTION_SUCCESS){
+          bridge.onStatus(true);
+          localStorage.setItem("physikPenEverConnected","1");
+        } else if(type === PenMessageType.PEN_DISCONNECTED){
+          bridge.onStatus(false);
+        }
+      };
+
+      PenHelper.dotCallback = (mac, dot) => {
+        switch(dot.dotType){
+          case DotTypes.PEN_DOWN: bridge.onDown(dot.x, dot.y); break;
+          case DotTypes.PEN_MOVE: bridge.onMove(dot.x, dot.y); break;
+          case DotTypes.PEN_UP:   bridge.onUp(); break;
+        }
+      };
+
+      window.__penConnect = async () => {
+        bridge.onStatus(false, "Neolab-Stift: verbinde…");
+        try{ await PenHelper.scanPen(); }
+        catch(e){ bridge.onStatus(false, "Neolab-Stift: Verbindung fehlgeschlagen ("+e.message+")"); }
+      };
+
+      // Nach dem ersten erfolgreichen Verbinden merkt sich Chrome den Stift.
+      // Beim nächsten Laden der Seite automatisch (ohne Klick) versuchen zu
+      // verbinden, sofern der Browser bereits gekoppelte Geräte kennt.
+      if(localStorage.getItem("physikPenEverConnected")==="1" && navigator.bluetooth.getDevices){
+        try{
+          const known = await navigator.bluetooth.getDevices();
+          if(known.length>0) window.__penConnect();
+        }catch(e){}
+      }
+    }catch(e){
+      console.error("Neolab-SDK konnte nicht geladen werden:", e);
+      bridge.onStatus(false, "Neolab-Stift: SDK-Fehler: "+(e && e.message ? e.message : e));
+    }
+  }
+</script>
+</body>
+</html>
